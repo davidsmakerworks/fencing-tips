@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 import hashlib
 import os
 import random
@@ -30,29 +31,34 @@ from typing import List, Optional
 
 import RPi.GPIO as GPIO
 
+import azurespeech
+
 SPEECH_CACHE_PATH = '/opt/fencingtips/cache'
 TIPS_FILE_PATH = '/opt/fencingtips/tips.txt'
+WARNING_SOUND_PATH = '/opt/fencingtips/alarm.wav'
+
+AZURE_SUBSCRIPTION_KEY = os.environ['AZURE_SPEECH_KEY']
+AZURE_REGION = os.environ['AZURE_SPEECH_REGION']
 
 # Set PCM output to high volume
 
 def set_volume():
-    subprocess.call([ '/usr/bin/amixer', 'set', 'PCM', '--', '0' ], shell=False)
+    subprocess.call(['/usr/bin/amixer', 'set', 'PCM', '--', '0'], shell=False)
 
-# Speaks given words with specified voice
-def speak(words):
-    # Convert Unicode string to CP437
-    enc_words = words.encode('cp437')
+# Speaks given words
+def speak(words: str, speech_obj: azurespeech.AzureSpeech):
+    hash_key = f'{words}|{speech_obj.voice}|{speech_obj.language}|{speech_obj.gender}|{speech_obj.output_format}'.encode('cp437')
 
-    cache_file = os.path.join(SPEECH_CACHE_PATH, hashlib.md5(enc_words).hexdigest() + '.wav')
+    cache_file = os.path.join(SPEECH_CACHE_PATH, hashlib.md5(hash_key).hexdigest() + '.wav')
 
     if (not os.path.isfile(cache_file)):
-        subprocess.call([ '/usr/bin/espeak', '-v', 'en-us+f3', '-s', '140', '-k', '20', '-w', cache_file, enc_words ], shell=False)
+        speech_obj.text_to_speech(text=words, output_file=cache_file)
 
-    subprocess.call([ '/usr/bin/aplay', cache_file ], shell=False)
+    subprocess.call(['/usr/bin/aplay', cache_file], shell=False)
 
 # Play specified sound File
 def play_sound(sound_file):
-    subprocess.call([ '/usr/bin/aplay', sound_file ], shell=False)
+    subprocess.call(['/usr/bin/aplay', sound_file], shell=False)
 
 class Tip:
     def __init__(self, text: str, phonetic: Optional[str] = None) -> None:
@@ -68,6 +74,10 @@ def init_gpio() -> None:
 def main() -> None:
     init_gpio()
     set_volume()
+
+    azspeech = azurespeech.AzureSpeech(
+        subscription_key=AZURE_SUBSCRIPTION_KEY,
+        region=AZURE_REGION)
 
     tips_list: List[Tip] = []
 
@@ -102,15 +112,15 @@ def main() -> None:
                     tip = random.choice(working_list)
 
                     if tip.phonetic:
-                        speak(tip.phonetic)
+                        speak(words=tip.phonetic, speech_obj=azspeech)
                     else:
-                        speak(tip.text)
+                        speak(words=tip.text, speech_obj=azspeech)
 
                     working_list.remove(tip)
 
                     cooldown_time = time.monotonic() + 10
                 else:
-                    play_sound('/opt/fencingtips/alarm.wav')
+                    play_sound(WARNING_SOUND_PATH)
 
                     cooldown_time += 5
 
