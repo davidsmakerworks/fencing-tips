@@ -23,6 +23,7 @@
 
 import requests
 import time
+import xml.etree.ElementTree as ET
 
 
 class AzureSpeech:
@@ -43,13 +44,13 @@ class AzureSpeech:
         self._access_token: str = ''
         self._token_exp_time: float = time.monotonic()
 
-        self.output_format = output_format
-        self.language = language
-        self.gender = gender
-        self.voice = voice
+        self.output_format: str = output_format
+        self.language: str = language
+        self.gender: str = gender
+        self.voice: str = voice
 
 
-    def _get_token(self) -> None:
+    def _refresh_token(self) -> None:
         if time.monotonic() >= self._token_exp_time:
             headers = {
                 'Ocp-Apim-Subscription-Key': self._subscription_key
@@ -62,7 +63,7 @@ class AzureSpeech:
 
 
     def text_to_speech(self, text: str, output_file: str):
-        self._get_token()
+        self._refresh_token()
 
         headers = {
             'Authorization': 'Bearer ' + self._access_token,
@@ -71,10 +72,29 @@ class AzureSpeech:
             'User-Agent': 'Phoenix Falcons Fencing Tips 1.0'
         }
 
-        request_content = (f"<speak version='1.0' xml:lang='{self.language}]'><voice xml:lang='{self.language}' xml:gender='{self.gender}' "
-        f"name='{self.voice}'> "
-        f"{text} "
-        "</voice></speak>")
+        speak_attrib = {
+            'version': '1.0',
+            'xml:lang': self.language
+        }
+
+        voice_attrib = {
+            'xml:lang': self.language,
+            'xml:gender': self.gender,
+            'name': self.voice
+        }
+
+        ssml_root = ET.Element(
+            'speak', 
+            attrib=speak_attrib)
+
+        voice_element = ET.SubElement(
+            ssml_root,
+            'voice',
+            attrib=voice_attrib)
+
+        voice_element.text = text
+
+        request_content = ET.tostring(ssml_root)
 
         response = requests.post(url=self._tts_url, headers=headers, data=request_content)
 

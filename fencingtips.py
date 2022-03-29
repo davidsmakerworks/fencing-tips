@@ -40,12 +40,23 @@ WARNING_SOUND_PATH = '/opt/fencingtips/alarm.wav'
 AZURE_SUBSCRIPTION_KEY = os.environ['AZURE_SPEECH_KEY']
 AZURE_REGION = os.environ['AZURE_SPEECH_REGION']
 
-# Set PCM output to high volume
+LED_PIN = 38
+BUTTON_PIN = 40
+
+COOLDOWN_TIME = 5 # Time before buton can be pressed again
+COOLDOWN_PENALTY = 5 # Time added to existing cooldown if button is pressed early
+
+
+class Tip:
+    def __init__(self, text: str, phonetic: Optional[str] = None) -> None:
+        self.text: str = text
+        self.phonetic: Optional[str] = phonetic
+
 
 def set_volume():
     subprocess.call(['/usr/bin/amixer', 'set', 'PCM', '--', '0'], shell=False)
 
-# Speaks given words
+
 def speak(words: str, speech_obj: azurespeech.AzureSpeech):
     hash_key = f'{words}|{speech_obj.voice}|{speech_obj.language}|{speech_obj.gender}|{speech_obj.output_format}'.encode('cp437')
 
@@ -56,21 +67,33 @@ def speak(words: str, speech_obj: azurespeech.AzureSpeech):
 
     subprocess.call(['/usr/bin/aplay', cache_file], shell=False)
 
-# Play specified sound File
+
 def play_sound(sound_file):
     subprocess.call(['/usr/bin/aplay', sound_file], shell=False)
 
-class Tip:
-    def __init__(self, text: str, phonetic: Optional[str] = None) -> None:
-        self.text: str = text
-        self.phonetic: Optional[str] = phonetic
 
 def init_gpio() -> None:
     GPIO.setmode(GPIO.BOARD)
 
-    GPIO.setup(38, GPIO.OUT) # LED control
-    GPIO.setup(40, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Button
+    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+
+def read_tips_file(filename: str) -> List[Tip]:
+    tips_list: List[Tip] = []
+
+    with open(filename, 'r') as tips_file:
+        for line in tips_file:
+            elements: List[str] = line.split('|')
+
+            if len(elements) > 1:
+                tips_list.append(Tip(text=elements[0], phonetic=elements[1]))
+            else:
+                tips_list.append(Tip(text=elements[0]))
     
+    return tips_list
+
+
 def main() -> None:
     init_gpio()
     set_volume()
@@ -79,16 +102,7 @@ def main() -> None:
         subscription_key=AZURE_SUBSCRIPTION_KEY,
         region=AZURE_REGION)
 
-    tips_list: List[Tip] = []
-
-    with open(TIPS_FILE_PATH, 'r') as tips_file:
-        for line in tips_file:
-            elements: List[str] = line.split('|')
-
-            if len(elements) > 1:
-                tips_list.append(Tip(text=elements[0], phonetic=elements[1]))
-            else:
-                tips_list.append(Tip(text=elements[0]))
+    tips_list: List[Tip] = read_tips_file(TIPS_FILE_PATH)
 
     working_list: List[Tip] = []
     cooldown_time: float = 0
@@ -100,14 +114,14 @@ def main() -> None:
             random.shuffle(working_list)
 
         if time.monotonic() > cooldown_time:
-            GPIO.output(38, GPIO.HIGH)
+            GPIO.output(LED_PIN, GPIO.HIGH)
         else:
-            GPIO.output(38, GPIO.LOW)
+            GPIO.output(LED_PIN, GPIO.LOW)
 
-        if not GPIO.input(40):
+        if not GPIO.input(BUTTON_PIN):
             if not previously_pressed:
                 if time.monotonic() > cooldown_time:
-                    GPIO.output(38, GPIO.LOW)
+                    GPIO.output(LED_PIN, GPIO.LOW)
 
                     tip = random.choice(working_list)
 
@@ -118,11 +132,11 @@ def main() -> None:
 
                     working_list.remove(tip)
 
-                    cooldown_time = time.monotonic() + 5
+                    cooldown_time = time.monotonic() + COOLDOWN_TIME
                 else:
                     play_sound(WARNING_SOUND_PATH)
 
-                    cooldown_time += 5
+                    cooldown_time += COOLDOWN_PENALTY
 
             previously_pressed = True
         else:
@@ -132,12 +146,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-                
-
-
-    
-
-        
-
-
-    
