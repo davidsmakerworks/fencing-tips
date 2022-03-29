@@ -21,7 +21,6 @@
 # SOFTWARE.
 
 
-import os
 import requests
 import time
 
@@ -52,7 +51,6 @@ class AzureSpeech:
 
     def _get_token(self) -> None:
         if time.monotonic() >= self._token_exp_time:
-            print('Token expired - getting new token')
             headers = {
                 'Ocp-Apim-Subscription-Key': self._subscription_key
             }
@@ -61,8 +59,6 @@ class AzureSpeech:
             
             self._access_token = str(response.text)
             self._token_exp_time = time.monotonic() + (8*60) # Hard coded 8-minute expiration
-        else:
-            print('Using cached token')
 
 
     def text_to_speech(self, text: str, output_file: str):

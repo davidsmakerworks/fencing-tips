@@ -118,7 +118,7 @@ def main() -> None:
 
                     working_list.remove(tip)
 
-                    cooldown_time = time.monotonic() + 10
+                    cooldown_time = time.monotonic() + 5
                 else:
                     play_sound(WARNING_SOUND_PATH)
 
