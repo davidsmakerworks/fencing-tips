@@ -46,6 +46,12 @@ BUTTON_PIN = 40
 COOLDOWN_TIME = 5 # Time before buton can be pressed again
 COOLDOWN_PENALTY = 5 # Time added to existing cooldown if button is pressed early
 
+VOICES = [
+        'en-US-JennyNeural', 'en-US-AriaNeural', 'en-US-CoraNeural',
+        'en-US-ChristopherNeural', 'en-US-EricNeural', 'en-US-GuyNeural',
+        'en-US-AnaNeural'
+    ]
+
 
 class Tip:
     def __init__(self, text: str, phonetic: Optional[str] = None) -> None:
@@ -100,7 +106,8 @@ def main() -> None:
 
     azspeech = azurespeech.AzureSpeech(
         subscription_key=AZURE_SUBSCRIPTION_KEY,
-        region=AZURE_REGION)
+        region=AZURE_REGION,
+        user_agent='Phoenix Falcons Fencing Tips 1.0')
 
     tips_list: List[Tip] = read_tips_file(TIPS_FILE_PATH)
 
@@ -124,6 +131,8 @@ def main() -> None:
                     GPIO.output(LED_PIN, GPIO.LOW)
 
                     tip = random.choice(working_list)
+
+                    azspeech.voice = random.choice(VOICES)
 
                     if tip.phonetic:
                         speak(words=tip.phonetic, speech_obj=azspeech)

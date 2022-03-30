@@ -33,7 +33,8 @@ class AzureSpeech:
             output_format: str='riff-16khz-16bit-mono-pcm',
             language: str='en-US',
             gender: str='Female',
-            voice: str='en-US-JennyNeural') -> None:
+            voice: str='en-US-JennyNeural',
+            user_agent: str='DMW Azure Speech Module 1.0') -> None:
         
         self._subscription_key: str = subscription_key
         self._region: str = region
@@ -48,6 +49,7 @@ class AzureSpeech:
         self.language: str = language
         self.gender: str = gender
         self.voice: str = voice
+        self.user_agent = user_agent
 
 
     def _refresh_token(self) -> None:
@@ -69,7 +71,7 @@ class AzureSpeech:
             'Authorization': 'Bearer ' + self._access_token,
             'Content-Type': 'application/ssml+xml',
             'X-Microsoft-OutputFormat': self.output_format,
-            'User-Agent': 'Phoenix Falcons Fencing Tips 1.0'
+            'User-Agent': self.user_agent
         }
 
         speak_attrib = {
