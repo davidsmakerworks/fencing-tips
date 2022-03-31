@@ -3,7 +3,4 @@ Push button, get fencing tip.
 
 Now with Azure Cognitive Services!
 
-# TODO
-* Clean up code
-* Remove magic numbers
-* Add multiple voices
+Tested on Rasberry Pi 3 with Raspberry Pi OS (Legacy).
