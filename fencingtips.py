@@ -107,7 +107,7 @@ def main() -> None:
     azspeech = azurespeech.AzureSpeech(
         subscription_key=AZURE_SUBSCRIPTION_KEY,
         region=AZURE_REGION,
-        user_agent='Phoenix Falcons Fencing Tips 1.0')
+        user_agent='Davids Makerworks Fencing Tips 1.0')
 
     tips_list: List[Tip] = read_tips_file(TIPS_FILE_PATH)
 
